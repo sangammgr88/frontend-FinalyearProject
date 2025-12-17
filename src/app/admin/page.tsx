@@ -1,159 +1,268 @@
 "use client";
 
-import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Users,
+  FileText,
+  Eye,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
-const DashboardPage = () => {
+const statsData = [
+  {
+    title: "Total Students",
+    value: "2,543",
+    change: "+12.5%",
+    trend: "up",
+    icon: Users,
+  },
+  {
+    title: "Active Exams",
+    value: "18",
+    change: "+4",
+    trend: "up",
+    icon: FileText,
+  },
+  {
+    title: "Live Monitoring",
+    value: "156",
+    change: "Active",
+    trend: "neutral",
+    icon: Eye,
+  },
+  {
+    title: "Violations Today",
+    value: "12",
+    change: "-8.3%",
+    trend: "down",
+    icon: AlertTriangle,
+  },
+];
+
+const examActivityData = [
+  { name: "Mon", exams: 24, violations: 3 },
+  { name: "Tue", exams: 32, violations: 5 },
+  { name: "Wed", exams: 28, violations: 2 },
+  { name: "Thu", exams: 35, violations: 7 },
+  { name: "Fri", exams: 42, violations: 4 },
+  { name: "Sat", exams: 18, violations: 1 },
+  { name: "Sun", exams: 12, violations: 2 },
+];
+
+const recentViolations = [
+  {
+    student: "John Doe",
+    exam: "Mathematics Final",
+    type: "Tab Switch",
+    time: "2 mins ago",
+    severity: "medium",
+  },
+  {
+    student: "Sarah Smith",
+    exam: "Physics Midterm",
+    type: "Multiple Faces",
+    time: "5 mins ago",
+    severity: "high",
+  },
+  {
+    student: "Mike Johnson",
+    exam: "Chemistry Test",
+    type: "Head Movement",
+    time: "8 mins ago",
+    severity: "low",
+  },
+  {
+    student: "Emily Brown",
+    exam: "Biology Quiz",
+    type: "No Face Detected",
+    time: "12 mins ago",
+    severity: "high",
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="p-6 bg-gray-50 min-h-screen space-y-6 w-max-full">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Online Examination Monitoring Dashboard
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Real-time overview of all students and exam activities
-        </p>
-      </div>
+    <div className="flex flex-col">
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Students" value="120" />
-        <StatCard title="Active Exams" value="5" />
-        <StatCard title="Live Students" value="87" />
-        <StatCard title="Detected Violations" value="34" />
-      </div>
+      <div className="flex-1 space-y-6 p-6">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {statsData.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.title}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p
+                    className={`flex items-center gap-1 text-xs ${
+                      stat.trend === "up"
+                        ? "text-green-600"
+                        : stat.trend === "down"
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {stat.trend === "up" && <TrendingUp className="h-3 w-3" />}
+                    {stat.trend === "down" && (
+                      <TrendingDown className="h-3 w-3" />
+                    )}
+                    {stat.change}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
-      {/* Exam Overview */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Ongoing Exams
-        </h2>
+        {/* Charts */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Exam Activity</CardTitle>
+              <CardDescription>
+                Number of exams conducted this week
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  exams: {
+                    label: "Exams",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={examActivityData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-muted"
+                    />
+                    <XAxis dataKey="name" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="exams"
+                      fill="var(--color-exams)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100 text-gray-700 text-left">
-                <th className="p-3">Exam Name</th>
-                <th className="p-3">Total Students</th>
-                <th className="p-3">Live</th>
-                <th className="p-3">Violations</th>
-                <th className="p-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  exam: "AI & Machine Learning",
-                  total: 40,
-                  live: 32,
-                  violations: 8,
-                  status: "Running",
-                },
-                {
-                  exam: "Database Systems",
-                  total: 35,
-                  live: 28,
-                  violations: 5,
-                  status: "Running",
-                },
-                {
-                  exam: "Computer Networks",
-                  total: 45,
-                  live: 27,
-                  violations: 21,
-                  status: "Critical",
-                },
-              ].map((item, index) => (
-                <tr key={index} className="border-t">
-                  <td className="p-3">{item.exam}</td>
-                  <td className="p-3">{item.total}</td>
-                  <td className="p-3">{item.live}</td>
-                  <td className="p-3 text-red-600 font-medium">
-                    {item.violations}
-                  </td>
-                  <td className="p-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Violations Trend</CardTitle>
+              <CardDescription>
+                Cheating detection over the past week
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  violations: {
+                    label: "Violations",
+                    color: "hsl(var(--chart-5))",
+                  },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={examActivityData}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-muted"
+                    />
+                    <XAxis dataKey="name" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="violations"
+                      stroke="var(--color-violations)"
+                      strokeWidth={2}
+                      dot={{ fill: "var(--color-violations)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Violations Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Violations</CardTitle>
+            <CardDescription>Latest cheating attempts detected</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentViolations.map((violation, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between border-b border-border pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{violation.student}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {violation.exam}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        item.status === "Critical"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-green-100 text-green-700"
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        violation.severity === "high"
+                          ? "bg-destructive/10 text-destructive"
+                          : violation.severity === "medium"
+                          ? "bg-yellow-500/10 text-yellow-600"
+                          : "bg-blue-500/10 text-blue-600"
                       }`}
                     >
-                      {item.status}
+                      {violation.type}
                     </span>
-                  </td>
-                </tr>
+                    <span className="text-sm text-muted-foreground">
+                      {violation.time}
+                    </span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Recent Student Activity */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Recent Student Activities
-        </h2>
-
-        <ul className="space-y-3">
-          {[
-            "Student ID 1023 switched tab twice",
-            "Student ID 1045 head movement detected",
-            "Student ID 1012 camera disconnected",
-            "Student ID 1038 suspicious object detected",
-          ].map((log, index) => (
-            <li
-              key={index}
-              className="border-l-4 border-yellow-500 bg-yellow-50 p-3 rounded"
-            >
-              {log}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* System Health */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SystemCard title="AI Engine" status="Operational" color="green" />
-        <SystemCard title="Camera Monitoring" status="Active" color="green" />
-        <SystemCard
-          title="Tab Switch Tracking"
-          status="Enabled"
-          color="green"
-        />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-};
-
-/* Reusable Components */
-
-const StatCard = ({ title, value }: { title: string; value: string }) => (
-  <div className="bg-white rounded-lg shadow p-5">
-    <p className="text-gray-500">{title}</p>
-    <h2 className="text-3xl font-bold text-gray-800 mt-2">{value}</h2>
-  </div>
-);
-
-const SystemCard = ({
-  title,
-  status,
-  color,
-}: {
-  title: string;
-  status: string;
-  color: "green" | "red";
-}) => (
-  <div className="bg-white rounded-lg shadow p-5 text-center">
-    <h3 className="text-gray-700 font-semibold">{title}</h3>
-    <p
-      className={`font-bold mt-2 ${
-        color === "green" ? "text-green-600" : "text-red-600"
-      }`}
-    >
-      {status}
-    </p>
-  </div>
-);
-
-export default DashboardPage;
+}

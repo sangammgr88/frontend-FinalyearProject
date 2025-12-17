@@ -20,7 +20,7 @@ const items = [
   },
   {
     title: "Inbox",
-    url: "/admin/answers",
+    url: "/admin/student",
     icon: Inbox,
   },
   {
