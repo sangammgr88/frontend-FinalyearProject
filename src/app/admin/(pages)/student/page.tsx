@@ -178,7 +178,7 @@ export default function StudentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/students/detail?id=${student.id}`}>
+                      <Link href={`/admin/AnswerDetails/${student.id}`}>
                         <Button variant="ghost" size="sm">
                           <Eye className="mr-2 h-4 w-4" />
                           View
