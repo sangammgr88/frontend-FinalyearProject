@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { Button } from "../ui/button";
 import Link from "next/link";
@@ -15,9 +16,173 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
+import { toast } from "../ui/use-toast";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Login Form State
+  const [loginData, setLoginData] = useState({
+    email: "",
+    password: "",
+  });
+
+  // Register Form State
+  const [registerData, setRegisterData] = useState({
+    fullName: "",
+    studentId: "",
+    email: "",
+    institution: "",
+    program: "",
+    semester: "",
+    photo: null as File | null,
+    password: "",
+    confirmPassword: "",
+    acceptTerms: false,
+  });
+
+  // Handle Login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: loginData.email,
+          password: loginData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store token in localStorage
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+
+        toast({
+          title: "Login Successful!",
+          description: `Welcome back! Redirecting to ${data.role} dashboard...`,
+        });
+
+        // Redirect based on role
+        setTimeout(() => {
+          if (data.role === "admin") {
+            window.location.href = "/admin/dashboard";
+          } else {
+            window.location.href = "user/userDashboard";
+          }
+        }, 1500);
+
+        setLoginOpen(false);
+      } else {
+        toast({
+          title: "Login Failed",
+          description: data.message || "Invalid credentials",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Registration
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Validation
+    if (registerData.password !== registerData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match!",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!registerData.acceptTerms) {
+      toast({
+        title: "Terms Required",
+        description: "Please accept the terms and conditions",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: registerData.fullName,
+          email: registerData.email,
+          password: registerData.password,
+          role: "student",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Registration Successful!",
+          description: "Your account has been created. Please login.",
+        });
+
+        // Reset form and close dialog
+        setRegisterData({
+          fullName: "",
+          studentId: "",
+          email: "",
+          institution: "",
+          program: "",
+          semester: "",
+          photo: null,
+          password: "",
+          confirmPassword: "",
+          acceptTerms: false,
+        });
+        setRegisterOpen(false);
+
+        // Open login dialog
+        setTimeout(() => setLoginOpen(true), 500);
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: data.message || "User already exists",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -59,13 +224,14 @@ const Navbar = () => {
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
-            <Dialog>
-              <form>
-                <DialogTrigger asChild>
-                  <Button variant="outline">Login</Button>
-                </DialogTrigger>
+            {/* Login Dialog */}
+            <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Login</Button>
+              </DialogTrigger>
 
-                <DialogContent className="sm:max-w-100">
+              <DialogContent className="sm:max-w-md">
+                <form onSubmit={handleLogin}>
                   <DialogHeader>
                     <DialogTitle>Student Login</DialogTitle>
                     <DialogDescription>
@@ -74,41 +240,63 @@ const Navbar = () => {
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div className="grid gap-4 py-2">
+                  <div className="grid gap-4 py-4">
                     {/* Email */}
                     <div className="grid gap-2">
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="login-email">Email Address</Label>
                       <Input
-                        id="email"
+                        id="login-email"
                         name="email"
                         type="email"
                         placeholder="student@example.com"
+                        value={loginData.email}
+                        onChange={(e) =>
+                          setLoginData({ ...loginData, email: e.target.value })
+                        }
+                        required
                       />
                     </div>
 
                     {/* Password */}
                     <div className="grid gap-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input id="password" name="password" type="password" />
+                      <Label htmlFor="login-password">Password</Label>
+                      <Input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        value={loginData.password}
+                        onChange={(e) =>
+                          setLoginData({
+                            ...loginData,
+                            password: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
 
                   <DialogFooter className="mt-6 flex justify-between items-center">
                     <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
+                      <Button variant="outline" type="button">
+                        Cancel
+                      </Button>
                     </DialogClose>
-                    <Button type="submit">Login</Button>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Logging in..." : "Login"}
+                    </Button>
                   </DialogFooter>
-                </DialogContent>
-              </form>
+                </form>
+              </DialogContent>
             </Dialog>
 
-            <Dialog>
-              <form>
-                <DialogTrigger asChild>
-                  <Button variant="outline">Get Started</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-125">
+            {/* Register Dialog */}
+            <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+              <DialogTrigger asChild>
+                <Button>Get Started</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleRegister}>
                   <DialogHeader>
                     <DialogTitle>Student Registration</DialogTitle>
                     <DialogDescription>
@@ -117,52 +305,78 @@ const Navbar = () => {
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
-                        <Label htmlFor="fullName">Full Name</Label>
+                        <Label htmlFor="fullName">Full Name *</Label>
                         <Input
                           id="fullName"
                           name="fullName"
                           placeholder="Your full name"
+                          value={registerData.fullName}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              fullName: e.target.value,
+                            })
+                          }
+                          required
                         />
                       </div>
 
-                      {/* Student ID */}
                       <div className="grid gap-2">
                         <Label htmlFor="studentId">Student ID</Label>
                         <Input
                           id="studentId"
                           name="studentId"
                           placeholder="LC00017002053"
+                          value={registerData.studentId}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              studentId: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
-                    {/* Email */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
-                        <Label htmlFor="email">Email Address</Label>
+                        <Label htmlFor="reg-email">Email Address *</Label>
                         <Input
-                          id="email"
+                          id="reg-email"
                           name="email"
                           type="email"
                           placeholder="student@example.com"
+                          value={registerData.email}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              email: e.target.value,
+                            })
+                          }
+                          required
                         />
                       </div>
 
-                      {/* Institution */}
                       <div className="grid gap-2">
                         <Label htmlFor="institution">Institution</Label>
                         <Input
                           id="institution"
                           name="institution"
                           placeholder="Texas College of Management & IT"
+                          value={registerData.institution}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              institution: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
-                    {/* Program */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
                         <Label htmlFor="program">Program</Label>
@@ -170,21 +384,33 @@ const Navbar = () => {
                           id="program"
                           name="program"
                           placeholder="BIT (Honours)"
+                          value={registerData.program}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              program: e.target.value,
+                            })
+                          }
                         />
                       </div>
 
-                      {/* Semester */}
                       <div className="grid gap-2">
                         <Label htmlFor="semester">Semester / Year</Label>
                         <Input
                           id="semester"
                           name="semester"
                           placeholder="6th Semester"
+                          value={registerData.semester}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              semester: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
 
-                    {/* Profile Photo */}
                     <div className="grid gap-2">
                       <Label htmlFor="photo">Profile Photo</Label>
                       <Input
@@ -192,47 +418,82 @@ const Navbar = () => {
                         name="photo"
                         type="file"
                         accept="image/*"
+                        onChange={(e) =>
+                          setRegisterData({
+                            ...registerData,
+                            photo: e.target.files?.[0] || null,
+                          })
+                        }
                       />
                     </div>
-                    {/* Password */}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" name="password" type="password" />
+                        <Label htmlFor="reg-password">Password *</Label>
+                        <Input
+                          id="reg-password"
+                          name="password"
+                          type="password"
+                          value={registerData.password}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              password: e.target.value,
+                            })
+                          }
+                          required
+                        />
                       </div>
 
-                      {/* Confirm Password */}
                       <div className="grid gap-2">
                         <Label htmlFor="confirmPassword">
-                          Confirm Password
+                          Confirm Password *
                         </Label>
                         <Input
                           id="confirmPassword"
                           name="confirmPassword"
                           type="password"
+                          value={registerData.confirmPassword}
+                          onChange={(e) =>
+                            setRegisterData({
+                              ...registerData,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                          required
                         />
                       </div>
                     </div>
 
-                    {/* Consent */}
-
-                    <div className="flex flex-col gap-6">
-                      <div className="flex items-center gap-3">
-                        <Checkbox id="terms" />
-                        <Label htmlFor="terms">
-                          Accept terms and conditions
-                        </Label>
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="terms"
+                        checked={registerData.acceptTerms}
+                        onCheckedChange={(checked) =>
+                          setRegisterData({
+                            ...registerData,
+                            acceptTerms: checked as boolean,
+                          })
+                        }
+                      />
+                      <Label htmlFor="terms">
+                        Accept terms and conditions *
+                      </Label>
                     </div>
                   </div>
+
                   <DialogFooter className="mt-6">
                     <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
+                      <Button variant="outline" type="button">
+                        Cancel
+                      </Button>
                     </DialogClose>
-                    <Button type="submit">Register</Button>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? "Registering..." : "Register"}
+                    </Button>
                   </DialogFooter>
-                </DialogContent>
-              </form>
+                </form>
+              </DialogContent>
             </Dialog>
           </div>
 
@@ -282,146 +543,25 @@ const Navbar = () => {
                 Testimonials
               </Link>
               <div className="flex flex-col gap-2 pt-2">
-                <Link href="/login">
-                  <Button variant="outline" className="w-full bg-transparent">
-                    Sign In
-                  </Button>
-                </Link>
-                <Dialog>
-                  <form>
-                    <DialogTrigger asChild>
-                      <Button variant="outline">Get Started</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-125">
-                      <DialogHeader>
-                        <DialogTitle>Student Registration</DialogTitle>
-                        <DialogDescription>
-                          Enter your details to register for the AI-powered
-                          examination system.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="grid gap-2">
-                            <Label htmlFor="fullName">Full Name</Label>
-                            <Input
-                              id="fullName"
-                              name="fullName"
-                              placeholder="Your full name"
-                            />
-                          </div>
-
-                          {/* Student ID */}
-                          <div className="grid gap-2">
-                            <Label htmlFor="studentId">Student ID</Label>
-                            <Input
-                              id="studentId"
-                              name="studentId"
-                              placeholder="LC00017002053"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Email */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="grid gap-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input
-                              id="email"
-                              name="email"
-                              type="email"
-                              placeholder="student@example.com"
-                            />
-                          </div>
-
-                          {/* Institution */}
-                          <div className="grid gap-2">
-                            <Label htmlFor="institution">Institution</Label>
-                            <Input
-                              id="institution"
-                              name="institution"
-                              placeholder="Texas College of Management & IT"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Program */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="grid gap-2">
-                            <Label htmlFor="program">Program</Label>
-                            <Input
-                              id="program"
-                              name="program"
-                              placeholder="BIT (Honours)"
-                            />
-                          </div>
-
-                          {/* Semester */}
-                          <div className="grid gap-2">
-                            <Label htmlFor="semester">Semester / Year</Label>
-                            <Input
-                              id="semester"
-                              name="semester"
-                              placeholder="6th Semester"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Profile Photo */}
-                        <div className="grid gap-2">
-                          <Label htmlFor="photo">Profile Photo</Label>
-                          <Input
-                            id="photo"
-                            name="photo"
-                            type="file"
-                            accept="image/*"
-                          />
-                        </div>
-                        {/* Password */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                              id="password"
-                              name="password"
-                              type="password"
-                            />
-                          </div>
-
-                          {/* Confirm Password */}
-                          <div className="grid gap-2">
-                            <Label htmlFor="confirmPassword">
-                              Confirm Password
-                            </Label>
-                            <Input
-                              id="confirmPassword"
-                              name="confirmPassword"
-                              type="password"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Consent */}
-
-                        <div className="flex flex-col gap-6">
-                          <div className="flex items-center gap-3">
-                            <Checkbox id="terms" />
-                            <Label htmlFor="terms">
-                              Accept terms and conditions
-                            </Label>
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter className="mt-6">
-                        <DialogClose asChild>
-                          <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Register</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </form>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setLoginOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setRegisterOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Get Started
+                </Button>
               </div>
             </div>
           </div>
