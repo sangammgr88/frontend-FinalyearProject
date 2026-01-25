@@ -38,7 +38,6 @@ const Navbar = () => {
     institution: "",
     program: "",
     semester: "",
-    photo: null as File | null,
     password: "",
     confirmPassword: "",
     acceptTerms: false,
@@ -50,39 +49,56 @@ const Navbar = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: loginData.email,
+            password: loginData.password,
+          }),
         },
-        body: JSON.stringify({
-          email: loginData.email,
-          password: loginData.password,
-        }),
-      });
+      );
 
       const data = await response.json();
 
       if (data.success) {
-        // Store token in localStorage
         localStorage.setItem("token", data.token);
+        
         localStorage.setItem("role", data.role);
+        
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("userId", data.user.id);
+          localStorage.setItem("userName", data.user.fullName);
+          localStorage.setItem("userEmail", data.user.email);
+        }
 
         toast({
           title: "Login Successful!",
           description: `Welcome back! Redirecting to ${data.role} dashboard...`,
         });
 
+        // Close dialog
+        setLoginOpen(false);
+
+        // Reset form
+        setLoginData({
+          email: "",
+          password: "",
+        });
+
         // Redirect based on role
         setTimeout(() => {
           if (data.role === "admin") {
-            window.location.href = "/admin/dashboard";
+            window.location.href = "/admin";
           } else {
-            window.location.href = "user/userDashboard";
+            window.location.href = "/user/userDashboard";
           }
         }, 1500);
-
-        setLoginOpen(false);
       } else {
         toast({
           title: "Login Failed",
@@ -91,6 +107,7 @@ const Navbar = () => {
         });
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -128,18 +145,25 @@ const Navbar = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullName: registerData.fullName,
+            email: registerData.email,
+            password: registerData.password,
+            role: "student",
+            studentId: registerData.studentId,
+            institution: registerData.institution,
+            program: registerData.program,
+            semester: registerData.semester,
+          }),
         },
-        body: JSON.stringify({
-          name: registerData.fullName,
-          email: registerData.email,
-          password: registerData.password,
-          role: "student",
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -157,7 +181,6 @@ const Navbar = () => {
           institution: "",
           program: "",
           semester: "",
-          photo: null,
           password: "",
           confirmPassword: "",
           acceptTerms: false,
@@ -174,6 +197,7 @@ const Navbar = () => {
         });
       }
     } catch (error) {
+      console.error("Registration error:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -410,23 +434,6 @@ const Navbar = () => {
                         />
                       </div>
                     </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="photo">Profile Photo</Label>
-                      <Input
-                        id="photo"
-                        name="photo"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) =>
-                          setRegisterData({
-                            ...registerData,
-                            photo: e.target.files?.[0] || null,
-                          })
-                        }
-                      />
-                    </div>
-
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-2">
                         <Label htmlFor="reg-password">Password *</Label>
