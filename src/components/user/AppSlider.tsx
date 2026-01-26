@@ -15,29 +15,9 @@ import {
 const items = [
   {
     title: "Dashboard",
-    url: "/admin/AdminHome",
+    url: "/user/ExamPage",
     icon: Home,
-  },
-  {
-    title: "Inbox",
-    url: "/admin/student",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
+  }
 ]
 
 export function AppSidebar() {

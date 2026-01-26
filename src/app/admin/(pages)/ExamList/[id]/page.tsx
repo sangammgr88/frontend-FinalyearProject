@@ -5,12 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 
+interface Option {
+  text: string;
+  isCorrect: boolean;
+}
+
 interface Question {
   _id: string;
   questionText: string;
   questionType: "mcq" | "text";
   points: number;
   difficulty: string;
+  options?: Option[];
+  textAnswer?: string;
 }
 
 interface Exam {
@@ -20,7 +27,6 @@ interface Exam {
   duration: number;
   totalMarks: number;
   passingMarks?: number;
-  subject?: string;
   questions: Question[];
   createdAt: string;
   createdBy: {
@@ -29,7 +35,8 @@ interface Exam {
   };
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 const AdminExamQuestionsPage = () => {
   const { id } = useParams();
@@ -109,7 +116,8 @@ const AdminExamQuestionsPage = () => {
           {exam.description || "No description provided"}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Duration: {exam.duration} minutes | Total Marks: {exam.totalMarks} | Passing Marks: {exam.passingMarks || "Not set"}
+          Duration: {exam.duration} minutes | Total Marks: {exam.totalMarks} |
+          Passing Marks: {exam.passingMarks || "Not set"}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Questions: {exam.questions.length}
@@ -121,10 +129,43 @@ const AdminExamQuestionsPage = () => {
         {exam.questions.map((q, index) => (
           <Card key={q._id} className="bg-muted">
             <CardContent className="space-y-2">
-              <p className="font-semibold">Q{index + 1}: {q.questionText}</p>
-              <p className="text-sm text-muted-foreground">
-                Type: {q.questionType.toUpperCase()} | Points: {q.points} | Difficulty: {q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)}
+              <p className="font-semibold">
+                Q{index + 1}: {q.questionText}
               </p>
+              <p className="text-sm text-muted-foreground">
+                Type: {q.questionType.toUpperCase()} | Points: {q.points} |
+                Difficulty:{" "}
+                {q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)}
+              </p>
+
+              {/* MCQ Options */}
+              {q.questionType === "mcq" && q.options && (
+                <div className="mt-2 space-y-1">
+                  <p className="font-medium">Options:</p>
+                  {q.options.map((opt, i) => (
+                    <p
+                      key={i}
+                      className={`px-2 py-1 rounded ${
+                        opt.isCorrect
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {opt.text} {opt.isCorrect ? "✔️ Correct" : "❌ Incorrect"}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Text Answer */}
+              {q.questionType === "text" && q.textAnswer && (
+                <div className="mt-2">
+                  <p className="font-medium">Answer:</p>
+                  <p className="text-blue-600 px-2 py-1 bg-blue-50 rounded">
+                    {q.textAnswer}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

@@ -14,7 +14,7 @@ import {
 // Menu items.
 const items = [
   {
-    title: "Dashboard",
+    title: "Create Exam Question",
     url: "/admin/AdminHome",
     icon: Home,
   },
@@ -24,8 +24,8 @@ const items = [
     icon: Inbox,
   },
   {
-    title: "Calendar",
-    url: "#",
+    title: "Exam List",
+    url: "/admin/ExamList",
     icon: Calendar,
   },
   
