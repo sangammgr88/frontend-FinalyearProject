@@ -18,7 +18,8 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 
 interface StudentResult {
-  studentId: string;
+  studentMongoId: string; // MongoDB ObjectId
+  studentId: string; // Student ID number (LC00017002053)
   studentName: string;
   studentEmail: string;
   enrolledExams: number;
@@ -229,8 +230,7 @@ export default function StudentsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {" "}
-                        <Link href={`/admin/AnswerDetails/${student.studentId}`}>
+                        <Link href={`/admin/student/${student.studentMongoId}`}>
                           <Button variant="ghost" size="sm">
                             <Eye className="mr-2 h-4 w-4" />
                             View

@@ -188,7 +188,7 @@ const AdminExamList = () => {
             Manage and monitor all examinations
           </p>
         </div>
-        <Link href="/admin/create-exam">
+        <Link href="/admin/AdminHome">
           <Button className="flex items-center gap-2">
             <Plus size={18} />
             Create New Exam
