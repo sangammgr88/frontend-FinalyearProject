@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +15,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-
-import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Flag } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Send,
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 interface Option {
   text: string;
@@ -78,6 +96,15 @@ const TakeExamPage = () => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Proctoring state
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [tabSwitches, setTabSwitches] = useState<Array<{timestamp: string, duration: number}>>([]);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+  const [showViolationWarning, setShowViolationWarning] = useState(false);
+  const [currentViolation, setCurrentViolation] = useState("");
+  const tabLeftTimeRef = useRef<number | null>(null);
+  const sessionIdRef = useRef<string>("");
+
   useEffect(() => {
     fetchExamDetails();
   }, [examId]);
@@ -100,6 +127,139 @@ const TakeExamPage = () => {
 
     return () => clearInterval(interval);
   }, [timerActive, timeRemaining]);
+
+  // Proctoring: Detect tab switching and window focus
+  useEffect(() => {
+    if (!examStarted) return;
+
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      setIsTabVisible(isVisible);
+
+      if (!isVisible) {
+        // User left the tab
+        tabLeftTimeRef.current = Date.now();
+        
+        setCurrentViolation("Tab switched or window minimized");
+        setShowViolationWarning(true);
+
+        // Log violation
+        logProctorEvent("tab_switch", "high", "Student switched tabs or minimized window");
+      } else {
+        // User returned to tab
+        if (tabLeftTimeRef.current) {
+          const duration = Math.round((Date.now() - tabLeftTimeRef.current) / 1000);
+          
+          setTabSwitches(prev => [...prev, {
+            timestamp: new Date().toISOString(),
+            duration: duration
+          }]);
+          
+          setTabSwitchCount(prev => prev + 1);
+          
+          tabLeftTimeRef.current = null;
+
+          toast({
+            title: "Violation Detected",
+            description: `You left the exam for ${duration} seconds. This has been logged.`,
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    const handleBlur = () => {
+      // Window lost focus
+      logProctorEvent("window_blur", "medium", "Exam window lost focus");
+    };
+
+    const handleFocus = () => {
+      // Window gained focus
+      console.log("Window focused");
+    };
+
+    // Prevent right click
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      logProctorEvent("right_click", "low", "Right click attempted");
+      toast({
+        title: "Action Blocked",
+        description: "Right-click is disabled during the exam",
+        variant: "destructive",
+      });
+    };
+
+    // Detect copy/paste attempts
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      logProctorEvent("copy_attempt", "medium", "Copy attempt detected");
+      toast({
+        title: "Action Blocked",
+        description: "Copying is disabled during the exam",
+        variant: "destructive",
+      });
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      logProctorEvent("paste_attempt", "medium", "Paste attempt detected");
+      toast({
+        title: "Action Blocked",
+        description: "Pasting is disabled during the exam",
+        variant: "destructive",
+      });
+    };
+
+    // Prevent page reload
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Are you sure you want to leave? Your exam progress will be lost.';
+      return e.returnValue;
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('paste', handlePaste);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('paste', handlePaste);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [examStarted]);
+
+  const logProctorEvent = async (eventType: string, severity: string, description: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      await fetch(`${API_BASE_URL}/api/proctor/log-event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          examId: exam?._id,
+          eventType,
+          severity,
+          description,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error("Error logging proctor event:", error);
+    }
+  };
 
   const fetchExamDetails = async () => {
     try {
@@ -168,12 +328,41 @@ const TakeExamPage = () => {
   };
 
   const handleStartExam = () => {
+    // Generate session ID
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionIdRef.current = sessionId;
+
     setExamStarted(true);
     setTimerActive(true);
+
+    // Start proctoring session
+    startProctorSession(sessionId);
+
     toast({
       title: "Exam Started!",
-      description: `You have ${exam?.duration} minutes. Good luck!`,
+      description: `You have ${exam?.duration} minutes. Proctoring is active.`,
     });
+  };
+
+  const startProctorSession = async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await fetch(`${API_BASE_URL}/api/proctor/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          sessionId,
+          examId: exam?._id,
+          startTime: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error("Error starting proctor session:", error);
+    }
   };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
@@ -242,6 +431,9 @@ const TakeExamPage = () => {
         // Text answers would need manual grading
       });
 
+      // Calculate total violation count
+      const totalViolations = tabSwitchCount;
+
       // Submit result to backend
       const response = await fetch(`${API_BASE_URL}/api/result/submit`, {
         method: "POST",
@@ -255,6 +447,8 @@ const TakeExamPage = () => {
           answers: answers,
           score: score,
           totalMarks: exam?.totalMarks,
+          violationCount: totalViolations,
+          tabSwitches: tabSwitches,
           submittedAt: new Date().toISOString(),
         }),
       });
@@ -264,12 +458,12 @@ const TakeExamPage = () => {
       if (data.success || response.ok) {
         toast({
           title: "Exam Submitted Successfully!",
-          description: `Your score: ${score}/${exam?.totalMarks}`,
+          description: `Your score: ${score}/${exam?.totalMarks} | Violations: ${totalViolations}`,
         });
 
         // Redirect to results
         setTimeout(() => {
-          router.push("/user");
+          router.push(`/user/results/${exam?._id}`);
         }, 2000);
       } else {
         toast({
@@ -421,6 +615,32 @@ const TakeExamPage = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {/* Tab Switch Warning */}
+              {tabSwitchCount > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <div className="text-sm">
+                    <span className="font-semibold text-destructive">{tabSwitchCount}</span>
+                    <span className="text-muted-foreground ml-1">violations</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab Status Indicator */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+                {isTabVisible ? (
+                  <>
+                    <Eye className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">Active</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-600 font-medium">Away</span>
+                  </>
+                )}
+              </div>
+
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Time Remaining</p>
                 <div className="flex items-center gap-2">
@@ -444,7 +664,13 @@ const TakeExamPage = () => {
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Progress: {getAnsweredCount()}/{exam.questions.length} answered</span>
-              <span>{getFlaggedCount()} flagged for review</span>
+              <span>
+                {tabSwitchCount > 0 && (
+                  <span className="text-destructive font-medium">
+                    {tabSwitchCount} violations detected
+                  </span>
+                )}
+              </span>
             </div>
             <progress value={getProgressPercentage()} />
           </div>
@@ -594,6 +820,37 @@ const TakeExamPage = () => {
         </div>
       </div>
 
+      {/* Violation Warning Dialog */}
+      <AlertDialog open={showViolationWarning} onOpenChange={setShowViolationWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Violation Detected
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="text-base font-semibold text-foreground">
+                {currentViolation}
+              </p>
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive font-medium">
+                  Total violations: {tabSwitchCount}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Multiple violations may result in exam disqualification
+                </p>
+              </div>
+              <p className="text-sm">
+                Please remain on this tab for the duration of the exam. Your actions are being monitored and logged.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>I Understand</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Submit Confirmation Dialog */}
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
         <AlertDialogContent>
@@ -605,6 +862,11 @@ const TakeExamPage = () => {
                 <p>Answered: {getAnsweredCount()}/{exam.questions.length}</p>
                 <p>Flagged: {getFlaggedCount()}</p>
                 <p>Time Remaining: {formatTime(timeRemaining)}</p>
+                {tabSwitchCount > 0 && (
+                  <p className="text-destructive font-medium">
+                    Violations Detected: {tabSwitchCount}
+                  </p>
+                )}
               </div>
               <p className="text-destructive">
                 Once submitted, you cannot change your answers.
