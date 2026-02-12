@@ -1,4 +1,7 @@
-import { Calendar, Home, Inbox, Search, Settings } from "lucide-react"
+"use client";
+
+import { Calendar, Home, Inbox, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import {
   Sidebar,
@@ -9,7 +12,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { Button } from "../ui/button";
 
 // Menu items.
 const items = [
@@ -28,10 +33,16 @@ const items = [
     url: "/admin/ExamList",
     icon: Calendar,
   },
-  
-]
+];
 
 export function AppSidebar() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/");
+  };
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -53,6 +64,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Logout at bottom */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout}>
+             <Button variant="outline" className="w-full bg-red-400">
+               <LogOut />
+              <span>Logout</span>
+             </Button >
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

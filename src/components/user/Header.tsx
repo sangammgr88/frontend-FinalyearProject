@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CgProfile } from "react-icons/cg";
+import { useRouter } from "next/navigation";
 
 const Header = () => {
+  const router = useRouter();
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/");
+  };
   return (
     <header className="sticky -top-3 z-50 w-7xl bg-white border-b shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -52,7 +59,10 @@ const Header = () => {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onClick={handleLogout}
+              >
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
